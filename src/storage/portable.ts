@@ -1,75 +1,51 @@
+import { zip, unzip, type AsyncZippable, type Unzipped } from 'fflate'
 import type { Deck } from '../types'
 import { getBlob, putBlob } from './db'
 
-const FILE_EXTENSION = '.pechakyxa.json'
+const FILE_EXTENSION = '.pechakyxa.zip'
+const MANIFEST_NAME = 'deck.json'
+const MEDIA_DIR = 'media/'
 
-interface PortableBlob {
-  blobId: string
-  mimeType: string
-  /** base64-encoded blob data */
-  data: string
-}
-
-interface PortableDeck {
+interface Manifest {
   format: 'pecha-kyxa-ii'
-  version: 1
+  version: 2
   deck: Deck
-  blobs: PortableBlob[]
 }
 
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result as string
-      // strip the "data:<mime>;base64," prefix
-      const commaIdx = result.indexOf(',')
-      resolve(result.slice(commaIdx + 1))
-    }
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(blob)
-  })
-}
-
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const byteChars = atob(base64)
-  const byteNumbers = new Array(byteChars.length)
-  for (let i = 0; i < byteChars.length; i++) {
-    byteNumbers[i] = byteChars.charCodeAt(i)
-  }
-  return new Blob([new Uint8Array(byteNumbers)], { type: mimeType })
-}
-
-function collectBlobIds(deck: Deck): { blobId: string; mimeType: string }[] {
-  const out: { blobId: string; mimeType: string }[] = []
+function collectBlobIds(deck: Deck): string[] {
+  const ids: string[] = []
   for (const slide of deck.slides) {
-    if (slide.media) {
-      out.push({ blobId: slide.media.blobId, mimeType: slide.media.mimeType })
-    }
+    if (slide.media) ids.push(slide.media.blobId)
   }
-  return out
+  return ids
+}
+
+async function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
+  const buf = await blob.arrayBuffer()
+  return new Uint8Array(buf)
 }
 
 export async function exportDeck(deck: Deck): Promise<void> {
-  const blobRefs = collectBlobIds(deck)
-  const blobs: PortableBlob[] = []
+  const blobIds = collectBlobIds(deck)
+  const files: AsyncZippable = {}
 
-  for (const ref of blobRefs) {
-    const blob = await getBlob(ref.blobId)
+  const manifest: Manifest = { format: 'pecha-kyxa-ii', version: 2, deck }
+  files[MANIFEST_NAME] = new TextEncoder().encode(JSON.stringify(manifest))
+
+  for (const blobId of blobIds) {
+    const blob = await getBlob(blobId)
     if (!blob) continue
-    const data = await blobToBase64(blob)
-    blobs.push({ blobId: ref.blobId, mimeType: ref.mimeType, data })
+    files[`${MEDIA_DIR}${blobId}`] = [await blobToUint8Array(blob), { level: 0 }]
   }
 
-  const portable: PortableDeck = {
-    format: 'pecha-kyxa-ii',
-    version: 1,
-    deck,
-    blobs,
-  }
+  const zipped = await new Promise<Uint8Array>((resolve, reject) => {
+    zip(files, { level: 0 }, (err, data) => {
+      if (err) reject(err)
+      else resolve(data)
+    })
+  })
 
-  const json = JSON.stringify(portable)
-  const file = new Blob([json], { type: 'application/json' })
+  const file = new Blob([new Uint8Array(zipped)], { type: 'application/zip' })
   const url = URL.createObjectURL(file)
   const a = document.createElement('a')
   const safeName = deck.name.trim().replace(/[^a-z0-9-_ ]/gi, '').replace(/\s+/g, '-') || 'deck'
@@ -82,17 +58,39 @@ export async function exportDeck(deck: Deck): Promise<void> {
 }
 
 export async function importDeckFile(file: File): Promise<Deck> {
-  const text = await file.text()
-  const parsed = JSON.parse(text) as PortableDeck
+  const buf = new Uint8Array(await file.arrayBuffer())
 
-  if (parsed.format !== 'pecha-kyxa-ii' || !parsed.deck) {
+  const entries = await new Promise<Unzipped>((resolve, reject) => {
+    unzip(buf, (err, data) => {
+      if (err) reject(err)
+      else resolve(data)
+    })
+  })
+
+  const manifestBytes = entries[MANIFEST_NAME]
+  if (!manifestBytes) {
     throw new Error('This file is not a valid Pecha Kyxa II deck export.')
   }
 
-  for (const b of parsed.blobs) {
-    const blob = base64ToBlob(b.data, b.mimeType)
-    await putBlob(b.blobId, blob)
+  const manifest = JSON.parse(new TextDecoder().decode(manifestBytes)) as Manifest
+  if (manifest.format !== 'pecha-kyxa-ii' || !manifest.deck) {
+    throw new Error('This file is not a valid Pecha Kyxa II deck export.')
   }
 
-  return parsed.deck
+  for (const [path, bytes] of Object.entries(entries)) {
+    if (!path.startsWith(MEDIA_DIR)) continue
+    const blobId = path.slice(MEDIA_DIR.length)
+    const mimeType = findMimeType(manifest.deck, blobId)
+    const copy = new Uint8Array(bytes)
+    await putBlob(blobId, new Blob([copy], { type: mimeType }))
+  }
+
+  return manifest.deck
+}
+
+function findMimeType(deck: Deck, blobId: string): string {
+  for (const slide of deck.slides) {
+    if (slide.media?.blobId === blobId) return slide.media.mimeType
+  }
+  return 'application/octet-stream'
 }

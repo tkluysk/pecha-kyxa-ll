@@ -219,7 +219,7 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
           <input
             ref={importInputRef}
             type="file"
-            accept=".json,.pechakyxa.json,application/json"
+            accept=".zip,.pechakyxa.zip,application/zip"
             style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0]
