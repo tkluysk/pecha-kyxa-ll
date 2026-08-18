@@ -296,6 +296,17 @@ button {
   background-position: 100% 0;
 }
 
+.btn--danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: rgba(255, 92, 108, 0.12);
+  border-color: var(--danger);
+}
+
 .slide-editor {
   display: grid;
   grid-template-rows: 1fr auto;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import type { Deck, MediaKind, Slide } from '../types'
+import { createEmptySlide } from '../types'
 import { putBlob, deleteBlob } from '../storage/db'
 import { exportDeck, importDeckFile } from '../storage/portable'
 import { useFitBox } from '../useFitBox'
@@ -54,6 +55,23 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
     if (!confirm('Clear this slide’s media, embed, and notes?')) return
     if (target.media) deleteBlob(target.media.blobId)
     updateSlide(id, { notes: '', media: null, embedUrl: null })
+  }
+
+  async function clearDeck() {
+    if (
+      !confirm(
+        `This will permanently clear all ${deck.slides.length} slides in "${deck.name}" — media, embeds, and notes. This cannot be undone. Continue?`,
+      )
+    )
+      return
+    await Promise.all(
+      deck.slides.filter((s) => s.media).map((s) => deleteBlob(s.media!.blobId)),
+    )
+    updateDeck((prev) => ({
+      ...prev,
+      slides: prev.slides.map(() => createEmptySlide()),
+    }))
+    setSelectedId('')
   }
 
   function moveSlide(id: string, direction: -1 | 1) {
@@ -227,6 +245,9 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
               e.target.value = ''
             }}
           />
+          <button className="btn btn--danger" onClick={clearDeck} disabled={busy !== null}>
+            ⚠ Clear deck
+          </button>
         </div>
       </aside>
 
