@@ -6,8 +6,11 @@ export function useDeck() {
   const [deck, setDeck] = useState<Deck | null>(null)
   const [loaded, setLoaded] = useState(false)
   const saveTimer = useRef<number | null>(null)
+  const initStarted = useRef(false)
 
   useEffect(() => {
+    if (initStarted.current) return
+    initStarted.current = true
     getAllDecks<Deck>().then((decks) => {
       if (decks.length > 0) {
         setDeck(decks.sort((a, b) => b.updatedAt - a.updatedAt)[0])

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Deck } from '../types'
 import { SECONDS_PER_SLIDE } from '../types'
 import { SlideContent } from './SlideContent'
+import { PixieCursor } from './PixieCursor'
 
 interface PlayModeProps {
   deck: Deck
@@ -76,9 +77,22 @@ export function PlayMode({ deck, onExit }: PlayModeProps) {
 
   return (
     <div className="play-mode">
+      <PixieCursor />
       <div className="play-mode__stage">
-        <SlideContent slide={slide} autoPlayVideo videoMuted={false} />
+        <SlideContent
+          slide={slide}
+          autoPlayVideo
+          videoMuted={false}
+          emptyMessage="No content for this slide"
+          showDropIcon={false}
+        />
       </div>
+
+      <img
+        src={`${import.meta.env.BASE_URL}logo.png`}
+        alt=""
+        className="play-mode__watermark"
+      />
 
       <div className="play-mode__hud">
         <div className="play-mode__countdown-ring" style={{ '--progress': `${progress}%` } as React.CSSProperties}>

@@ -10,7 +10,6 @@ export interface SlideMedia {
 
 export interface Slide {
   id: string
-  title: string
   notes: string
   media: SlideMedia | null
   embedUrl: string | null
@@ -30,7 +29,6 @@ export const SLIDE_COUNT = 20
 export function createEmptySlide(): Slide {
   return {
     id: crypto.randomUUID(),
-    title: '',
     notes: '',
     media: null,
     embedUrl: null,

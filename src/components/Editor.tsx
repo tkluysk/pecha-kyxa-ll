@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type DragEvent } from 'react'
 import type { Deck, MediaKind, Slide } from '../types'
 import { putBlob, deleteBlob } from '../storage/db'
 import { exportDeck, importDeckFile } from '../storage/portable'
+import { useFitBox } from '../useFitBox'
 import { SlideContent } from './SlideContent'
+import { SlideThumb } from './SlideThumb'
 
 interface EditorProps {
   deck: Deck
@@ -19,13 +21,25 @@ function mediaKindFromMime(mime: string): MediaKind | null {
 }
 
 export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) {
+  const { containerRef: stageRef, size: previewSize } = useFitBox(16 / 10)
   const [selectedId, setSelectedId] = useState<string>(deck.slides[0]?.id ?? '')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState<'export' | 'import' | null>(null)
+  const [dragActive, setDragActive] = useState(false)
+  const dragCounter = useRef(0)
 
-  const selectedIndex = deck.slides.findIndex((s) => s.id === selectedId)
+  const selectedIndex = Math.max(
+    0,
+    deck.slides.findIndex((s) => s.id === selectedId),
+  )
   const slide: Slide | undefined = deck.slides[selectedIndex]
+
+  useEffect(() => {
+    if (!deck.slides.some((s) => s.id === selectedId) && deck.slides[0]) {
+      setSelectedId(deck.slides[0].id)
+    }
+  }, [deck.slides, selectedId])
 
   function updateSlide(id: string, patch: Partial<Slide>) {
     updateDeck((prev) => ({
@@ -37,9 +51,9 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
   function clearSlide(id: string) {
     const target = deck.slides.find((s) => s.id === id)
     if (!target) return
-    if (!confirm('Clear this slide’s title, media, embed, and notes?')) return
+    if (!confirm('Clear this slide’s media, embed, and notes?')) return
     if (target.media) deleteBlob(target.media.blobId)
-    updateSlide(id, { title: '', notes: '', media: null, embedUrl: null })
+    updateSlide(id, { notes: '', media: null, embedUrl: null })
   }
 
   function moveSlide(id: string, direction: -1 | 1) {
@@ -70,6 +84,34 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
       media: { kind, blobId, mimeType: file.type, fileName: file.name },
       embedUrl: null,
     })
+  }
+
+  function handleDragEnter(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    if (!e.dataTransfer.types.includes('Files')) return
+    dragCounter.current += 1
+    setDragActive(true)
+  }
+
+  function handleDragOver(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+  }
+
+  function handleDragLeave(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    dragCounter.current -= 1
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0
+      setDragActive(false)
+    }
+  }
+
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    dragCounter.current = 0
+    setDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFileUpload(file)
   }
 
   function handleEmbedChange(url: string) {
@@ -116,11 +158,58 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
               <p className="slide-list__subhead">20 slides · 20s each</p>
             </div>
           </div>
-          <button className="btn btn--primary" onClick={onPlay}>
+        </div>
+        <div className="slide-list__play-row">
+          <button className="btn btn--primary btn--play" onClick={onPlay}>
             ▶ Play
           </button>
         </div>
-        <div className="slide-list__transfer">
+        <ol className="slide-list__items">
+          {deck.slides.map((s, i) => (
+            <li
+              key={s.id}
+              className={`slide-list__item ${s.id === selectedId ? 'slide-list__item--active' : ''}`}
+              onClick={() => setSelectedId(s.id)}
+            >
+              <SlideThumb slide={s} />
+              <div className="slide-list__item-bar">
+                <span className="slide-list__num">{i + 1}</span>
+                <div className="slide-list__actions">
+                  <button
+                    title="Move up"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      moveSlide(s.id, -1)
+                    }}
+                    disabled={i === 0}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    title="Move down"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      moveSlide(s.id, 1)
+                    }}
+                    disabled={i === deck.slides.length - 1}
+                  >
+                    ↓
+                  </button>
+                  <button
+                    title="Clear slide"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      clearSlide(s.id)
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="slide-list__footer">
           <button className="btn" onClick={handleExport} disabled={busy !== null}>
             {busy === 'export' ? 'Exporting…' : '⬇ Download deck'}
           </button>
@@ -139,95 +228,78 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
             }}
           />
         </div>
-        <ol className="slide-list__items">
-          {deck.slides.map((s, i) => (
-            <li
-              key={s.id}
-              className={`slide-list__item ${s.id === selectedId ? 'slide-list__item--active' : ''}`}
-              onClick={() => setSelectedId(s.id)}
-            >
-              <span className="slide-list__num">{i + 1}</span>
-              <span className="slide-list__title">{s.title || 'Untitled slide'}</span>
-              <div className="slide-list__actions">
-                <button
-                  title="Move up"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    moveSlide(s.id, -1)
-                  }}
-                  disabled={i === 0}
-                >
-                  ↑
-                </button>
-                <button
-                  title="Move down"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    moveSlide(s.id, 1)
-                  }}
-                  disabled={i === deck.slides.length - 1}
-                >
-                  ↓
-                </button>
-                <button
-                  title="Clear slide"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    clearSlide(s.id)
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            </li>
-          ))}
-        </ol>
       </aside>
 
       {slide && (
         <main className="slide-editor">
-          <div className="slide-editor__preview">
-            <SlideContent slide={slide} />
+          <div className="slide-editor__stage" ref={stageRef}>
+            <div
+              className={[
+                'slide-editor__preview',
+                !slide.media && !slide.embedUrl ? 'slide-editor__preview--empty' : '',
+                dragActive ? 'slide-editor__preview--drag' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              style={
+                previewSize.width > 0
+                  ? { width: previewSize.width, height: previewSize.height }
+                  : undefined
+              }
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <SlideContent slide={slide} />
+              {dragActive && (
+                <div className="slide-editor__drop-hint">
+                  <span>Drop image, GIF, or video to set as this slide's media</span>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="slide-editor__fields">
             <div className="slide-editor__fields-header">
               <span className="slide-editor__slide-num">Slide {selectedIndex + 1} of {deck.slides.length}</span>
-              <button className="btn btn--danger-outline" onClick={() => clearSlide(slide.id)}>
+              <button className="slide-editor__clear-link" onClick={() => clearSlide(slide.id)}>
                 Clear slide
               </button>
             </div>
 
-            <label className="field">
-              <span>Title</span>
-              <input
-                type="text"
-                value={slide.title}
-                onChange={(e) => updateSlide(slide.id, { title: e.target.value })}
-                placeholder="Slide title"
-              />
-            </label>
-
             <div className="field">
               <span>Media (image, GIF, or video)</span>
-              <div className="media-upload-row">
+              <div
+                className={`media-dropzone ${dragActive ? 'media-dropzone--drag' : ''}`}
+                onClick={() => fileInputRef.current?.click()}
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*,video/*"
+                  className="media-dropzone__input"
+                  onClick={(e) => e.stopPropagation()}
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) handleFileUpload(file)
                     e.target.value = ''
                   }}
                 />
-                {slide.media && (
-                  <button className="btn" onClick={clearMedia}>
-                    Remove media
-                  </button>
-                )}
+                <span className="media-dropzone__icon">⤓</span>
+                <span className="media-dropzone__label">
+                  {slide.media ? slide.media.fileName : 'Drag & drop, or click to choose a file'}
+                </span>
               </div>
-              {slide.media && <p className="hint">{slide.media.fileName}</p>}
+              {slide.media && (
+                <button className="btn" onClick={(e) => { e.stopPropagation(); clearMedia() }}>
+                  Remove media
+                </button>
+              )}
             </div>
 
             <label className="field">
