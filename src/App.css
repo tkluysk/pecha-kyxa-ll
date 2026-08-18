@@ -72,6 +72,23 @@ button {
   border-bottom: 1px solid var(--border);
 }
 
+.slide-list__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.slide-list__logo {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px;
+}
+
 .slide-list__header h2 {
   font-size: 1rem;
   margin: 0;

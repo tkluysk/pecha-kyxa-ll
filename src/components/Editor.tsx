@@ -109,9 +109,12 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
     <div className="editor">
       <aside className="slide-list">
         <div className="slide-list__header">
-          <div>
-            <h2>{deck.name}</h2>
-            <p className="slide-list__subhead">20 slides · 20s each</p>
+          <div className="slide-list__brand">
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" className="slide-list__logo" />
+            <div>
+              <h2>{deck.name}</h2>
+              <p className="slide-list__subhead">20 slides · 20s each</p>
+            </div>
           </div>
           <button className="btn btn--primary" onClick={onPlay}>
             ▶ Play
