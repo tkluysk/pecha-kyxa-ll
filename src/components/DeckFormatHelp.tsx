@@ -1,69 +1,50 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 interface DeckFormatHelpProps {
   onClose: () => void
 }
 
 const SPEC_URL = `${import.meta.env.BASE_URL}deck-format.md`
+const SPEC_ABS_URL =
+  typeof window !== 'undefined' ? new URL(SPEC_URL, window.location.href).href : SPEC_URL
 
-const PROMPT_TEMPLATE = `Create a Pecha Kucha deck about <YOUR TOPIC> for use on the Pecha Kyxa ll site.
+const SPEC_GIST = `In short: exactly 20 slides, 20 seconds each; each slide is one visual (an \
+image / GIF / short-video URL, or an embedUrl) with little or no text on it; the \
+spoken narration goes ONLY in each slide's "notes" (2-4 spoken-style sentences) \
+and must never be printed on the slide. Prefer public media URLs \
+(upload.wikimedia.org is ideal) so no files need bundling.`
 
-Pecha Kucha is visual-first. Each slide is one image or strong visual with
-LITTLE OR NO TEXT on it — no bullet points, no sentences, at most a few words
-(a title, a number, a label); many slides have zero text. The slide must NOT
-repeat or paraphrase what the speaker says. The spoken narration lives ONLY in
-each slide's "notes" (2-4 spoken-style sentences, ~20 seconds of talking).
-
-Prefer referencing media by URL over bundling files: point a slide at a public
-image URL (upload.wikimedia.org links are ideal) so the ZIP is just deck.json
-with no media/ folder. A slide's visual can be an image, an animated GIF, or a
-video — all equal options. Video plays muted and loops, so any clip must be
-well under 20 seconds.
-
-The deck file is a ZIP named <name>.pechakyxa.zip containing:
-  - deck.json  (UTF-8 JSON manifest, described below)
-  - media/<blobId>  (OPTIONAL — only for bundled files, not for URL media)
-
-deck.json:
-{
-  "format": "pecha-kyxa-ii",
-  "version": 2,
-  "deck": {
-    "id": "<unique string>",
-    "name": "<deck title>",
-    "createdAt": <epoch ms>,
-    "updatedAt": <epoch ms>,
-    "slides": [ /* EXACTLY 20 slide objects, in order */ ]
+function buildPrompt(topic: string, instructions: string): string {
+  const t = topic.trim() || '[fill in a topic]'
+  const lines = [
+    'Build me a Pecha Kucha deck for the Pecha Kyxa ll site.',
+    '',
+    `Topic: ${t}`,
+  ]
+  const extra = instructions.trim()
+  if (extra) {
+    lines.push('', 'Style / instructions:', extra)
   }
+  lines.push(
+    '',
+    `Follow the Pecha Kyxa ll deck-format spec at ${SPEC_ABS_URL} exactly`,
+    '(also attached to this message if your chat supports file uploads).',
+    SPEC_GIST,
+    '',
+    'Output the finished deck as a .pechakyxa.zip I can download and upload to',
+    'the site. If you can’t emit a binary zip, output deck.json and the exact',
+    '`zip` command to build it.',
+  )
+  return lines.join('\n')
 }
-
-Each slide:
-{
-  "id": "<unique string>",
-  "notes": "<presenter notes, 2-4 spoken-style sentences>",
-  "media": null,        // OR a media object (see below). null if unused.
-  "embedUrl": null       // OR "https://..." to a page that allows iframe embedding (Wikipedia, youtube.com/embed/<id>, CodePen, etc.)
-}
-
-media object — set EXACTLY ONE of blobId / url:
-  URL media (preferred):  { "kind": "image"|"gif"|"video", "url": "https://.../photo.jpg", "mimeType": "", "fileName": "photo.jpg" }
-  bundled file:            { "kind": "image"|"gif"|"video", "blobId": "<unique string, also the media/ filename>", "mimeType": "<exact mime>", "fileName": "<original name>" }
-  - url must link straight to the media file (.jpg/.png/.gif/.mp4/.webm), not to a page containing it.
-
-Rules:
-  - EXACTLY 20 slides, 20 seconds each (duration is fixed by the app).
-  - Slides carry little/no text and never echo the narration; the script is in "notes" only.
-  - A slide sets media OR embedUrl, never both. Both null = notes-only slide.
-  - Each media object sets exactly one of blobId / url. URL media needs no media/ file.
-  - Every media.blobId has a matching media/<blobId> file and vice versa.
-  - Any video (bundled or URL) is well under 20 seconds.
-  - mimeType must match the bytes for bundled files; it may be "" for URL media.
-
-Output the finished .pechakyxa.zip for download. If you can't emit a binary zip,
-output deck.json and give me the exact \`zip\` command to build it, then I'll
-upload it via the site's "Upload deck" button.`
 
 export function DeckFormatHelp({ onClose }: DeckFormatHelpProps) {
+  const [topic, setTopic] = useState('')
+  const [instructions, setInstructions] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const prompt = useMemo(() => buildPrompt(topic, instructions), [topic, instructions])
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -72,8 +53,17 @@ export function DeckFormatHelp({ onClose }: DeckFormatHelpProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  useEffect(() => {
+    if (!copied) return
+    const id = window.setTimeout(() => setCopied(false), 1800)
+    return () => window.clearTimeout(id)
+  }, [copied])
+
   function copyPrompt() {
-    navigator.clipboard?.writeText(PROMPT_TEMPLATE)
+    navigator.clipboard?.writeText(prompt).then(
+      () => setCopied(true),
+      () => setCopied(false),
+    )
   }
 
   return (
@@ -84,45 +74,51 @@ export function DeckFormatHelp({ onClose }: DeckFormatHelpProps) {
         </button>
         <h2>Make a deck with an LLM</h2>
         <p className="modal__lead">
-          Ask ChatGPT, Claude, or any LLM chat to build a deck, then upload the
-          resulting <code>.pechakyxa.zip</code> here with <strong>Upload deck</strong>.
-        </p>
-        <p className="modal__lead">
-          Pecha Kucha is visual-first: each slide is one image or visual with
-          little or no text, and the slide never repeats what the speaker says —
-          the spoken script lives only in the per-slide presenter notes. Slides
-          can point at a web image, GIF, or short video by URL (nothing to bundle).
-          The prompt below tells the LLM all of this.
+          Fill in a topic, copy the prompt, and paste it into ChatGPT, Claude, or
+          any LLM chat. Then upload the <code>.pechakyxa.zip</code> it returns with{' '}
+          <strong>Upload deck</strong>.
         </p>
 
-        <ol className="modal__steps">
-          <li>Copy the prompt below and paste it into your LLM chat.</li>
-          <li>
-            Replace <code>&lt;YOUR TOPIC&gt;</code> with what the deck is about.
-          </li>
-          <li>
-            Download the <code>.pechakyxa.zip</code> it produces (or, if every
-            slide uses a URL, just save the <code>deck.json</code> it prints and
-            zip that one file).
-          </li>
-          <li>
-            Back here, click <strong>Upload deck</strong> and choose that file.
-          </li>
-        </ol>
+        <label className="field">
+          <span>Topic</span>
+          <input
+            type="text"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="e.g. the history of the shipping container"
+            autoFocus
+          />
+        </label>
+
+        <label className="field">
+          <span>Style / tone / instructions (optional)</span>
+          <textarea
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            placeholder="e.g. wry and fast-paced; assume a general audience; lean on striking photos; end on a provocation"
+            rows={3}
+          />
+        </label>
 
         <div className="modal__prompt-head">
-          <span>Prompt template</span>
-          <button className="btn" onClick={copyPrompt}>
-            Copy prompt
+          <span>Prompt to paste</span>
+          <button className="btn btn--primary" onClick={copyPrompt}>
+            {copied ? '✓ Copied' : 'Copy prompt'}
           </button>
         </div>
-        <pre className="modal__prompt">{PROMPT_TEMPLATE}</pre>
+        <pre className="modal__prompt">{prompt}</pre>
 
         <p className="modal__footnote">
-          Full written spec (with a worked example):{' '}
+          The prompt links to the format spec. Some chats read the URL directly;
+          otherwise{' '}
+          <a href={SPEC_URL} download="deck-format.md">
+            download deck-format.md
+          </a>{' '}
+          and attach it to the same message. (
           <a href={SPEC_URL} target="_blank" rel="noreferrer">
-            deck-format.md ↗
+            view it ↗
           </a>
+          )
         </p>
       </div>
     </div>

@@ -234,23 +234,43 @@ button {
   line-height: 1.5;
 }
 
-.modal__steps {
-  margin: 0 0 20px;
-  padding-left: 20px;
-  font-size: 0.85rem;
-  color: var(--text-dim);
-  line-height: 1.6;
+.modal .field {
+  margin-bottom: 14px;
+}
+
+.modal .field input[type='text'],
+.modal .field textarea {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.modal .field input:focus,
+.modal .field textarea:focus {
+  outline: none;
+  border-color: var(--accent-solid);
 }
 
 .modal__prompt-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  gap: 12px;
+  margin: 4px 0 6px;
   font-size: 0.78rem;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.modal__prompt-head .btn {
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .modal__prompt {
@@ -277,6 +297,10 @@ button {
 .modal__footnote a,
 .modal__lead a {
   color: var(--accent-solid);
+}
+
+.modal__footnote {
+  line-height: 1.5;
 }
 
 .modal code {

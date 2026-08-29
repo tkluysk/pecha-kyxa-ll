@@ -4,42 +4,14 @@
 > `"pecha-kyxa-ii"` — that value is historical and must stay exactly as written,
 > even though the app is now "Pecha Kyxa ll".
 
-This document describes the `.pechakyxa.zip` deck file that the
+This is the reference spec for the `.pechakyxa.zip` deck file that the
 [Pecha Kyxa ll](https://tkluysk.github.io/pecha-kyxa-ll/) web app imports and
-exports. It is written so you can hand the whole thing to an LLM.
+exports.
 
----
-
-## Prompt to paste into your LLM chat
-
-> Create a Pecha Kucha deck about **YOUR TOPIC HERE** for use on the Pecha Kyxa ll
-> site. Follow the deck file format spec below exactly. The deck must have exactly
-> 20 slides, 20 seconds each.
->
-> Pecha Kucha is a visual-first format. Slides carry an image or a single strong
-> visual and **little or no text** — no bullet points, no paragraphs, at most a
-> few words (a title, a number, a label). The slide must **not** repeat or
-> paraphrase what the speaker says; the spoken narration lives only in the
-> presenter notes. If a slide has words on it, they should add something the
-> narration doesn't state outright.
->
-> For each slide:
-> - Write `notes` as 2–4 sentences of spoken-word narration (~40 seconds of
->   talking is too much — aim for ~20 seconds' worth).
-> - Choose a visual, referencing web resources by URL so I don't have to supply
->   files: an `embedUrl` to a relevant public web page, or a `media` object with
->   a `url` pointing straight at an image, GIF, or short (sub‑20‑second) video —
->   `upload.wikimedia.org` links are ideal. Images are the common case; GIF and
->   video are equally valid when they fit. Only leave media empty if you truly
->   can't pick a real URL.
-> - Never put the narration text onto the slide.
->
-> Output the finished deck as a `.pechakyxa.zip` file I can download and upload to
-> the site. If you cannot produce a binary zip, output the `deck.json` contents
-> and give me the exact `zip` command to run.
->
-> --- SPEC BELOW ---
-> *(paste the rest of this file here)*
+**How to use it:** attach this whole file to your LLM chat unchanged, then send
+a short prompt naming your topic (and any style/tone). The app's *Make a deck
+with an LLM* panel gives you that prompt to copy. You do not need to edit this
+file.
 
 ---
 

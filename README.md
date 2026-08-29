@@ -8,12 +8,15 @@ Live: https://tkluysk.github.io/pecha-kyxa-ll/
 
 ## Deck files
 
-Decks export/import as a `.pechakyxa.zip` archive (`deck.json` manifest plus a
-`media/` folder). The format is documented in
-[`public/deck-format.md`](public/deck-format.md), which is also served at
-[`/pecha-kyxa-ll/deck-format.md`](https://tkluysk.github.io/pecha-kyxa-ll/deck-format.md)
-so you can paste it into an LLM chat and ask it to build a deck for you. The
-editor's **✨ Make a deck with an LLM** link opens an in-app copy of the prompt.
+Decks export/import as a `.pechakyxa.zip` archive (`deck.json` manifest plus an
+optional `media/` folder; media may also be referenced by URL). The format is
+documented in [`public/deck-format.md`](public/deck-format.md), served at
+[`/pecha-kyxa-ll/deck-format.md`](https://tkluysk.github.io/pecha-kyxa-ll/deck-format.md).
+
+The editor's **✨ Make a deck with an LLM** link opens a panel that lets you
+download that spec file and copy a short prompt. Attach the (unedited) spec to
+an LLM chat, paste the prompt with your topic, and upload the `.pechakyxa.zip`
+it returns.
 
 ## Develop
 
