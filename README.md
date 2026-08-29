@@ -1,32 +1,25 @@
-# React + TypeScript + Vite
+# Pecha Kyxa ll
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A tiny web app for building and presenting [Pecha Kucha](https://en.wikipedia.org/wiki/PechaKucha)
+decks — 20 slides, 20 seconds each. Editor, timed play mode, and portable
+deck files that move between browsers.
 
-Currently, two official plugins are available:
+Live: https://tkluysk.github.io/pecha-kyxa-ll/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Deck files
 
-## React Compiler
+Decks export/import as a `.pechakyxa.zip` archive (`deck.json` manifest plus a
+`media/` folder). The format is documented in
+[`public/deck-format.md`](public/deck-format.md), which is also served at
+[`/pecha-kyxa-ll/deck-format.md`](https://tkluysk.github.io/pecha-kyxa-ll/deck-format.md)
+so you can paste it into an LLM chat and ask it to build a deck for you. The
+editor's **✨ Make a deck with an LLM** link opens an in-app copy of the prompt.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Develop
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+npm install
+npm run dev      # http://localhost:5173/pecha-kyxa-ll/
+npm run build
+npm run lint
 ```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.

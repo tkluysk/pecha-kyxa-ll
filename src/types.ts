@@ -2,8 +2,13 @@ export type MediaKind = 'image' | 'gif' | 'video'
 
 export interface SlideMedia {
   kind: MediaKind
-  /** Key into the IndexedDB blob store */
-  blobId: string
+  /**
+   * Key into the IndexedDB blob store. Set for uploaded/dropped files.
+   * Exactly one of `blobId` / `url` is set.
+   */
+  blobId?: string
+  /** Remote media URL. Set when the media is referenced directly from the web. */
+  url?: string
   mimeType: string
   fileName: string
 }

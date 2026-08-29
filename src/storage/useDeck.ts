@@ -15,7 +15,7 @@ export function useDeck() {
       if (decks.length > 0) {
         setDeck(decks.sort((a, b) => b.updatedAt - a.updatedAt)[0])
       } else {
-        setDeck(createEmptyDeck('Pecha Kyxa II'))
+        setDeck(createEmptyDeck('Pecha Kyxa ll'))
       }
       setLoaded(true)
     })

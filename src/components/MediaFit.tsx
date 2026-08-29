@@ -18,7 +18,8 @@ export function MediaFit({
   controls = false,
   loop = false,
 }: MediaFitProps) {
-  const url = useBlobUrl(media.blobId)
+  const blobUrl = useBlobUrl(media.url ? null : media.blobId)
+  const url = media.url ?? blobUrl
 
   if (!url) {
     return <div className={`media-fit media-fit--loading ${className ?? ''}`}>Loading…</div>
@@ -38,5 +39,12 @@ export function MediaFit({
     )
   }
 
-  return <img className={`media-fit ${className ?? ''}`} src={url} alt={media.fileName} />
+  return (
+    <img
+      className={`media-fit ${className ?? ''}`}
+      src={url}
+      alt={media.fileName}
+      referrerPolicy="no-referrer"
+    />
+  )
 }

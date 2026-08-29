@@ -15,7 +15,7 @@ interface Manifest {
 function collectBlobIds(deck: Deck): string[] {
   const ids: string[] = []
   for (const slide of deck.slides) {
-    if (slide.media) ids.push(slide.media.blobId)
+    if (slide.media?.blobId) ids.push(slide.media.blobId)
   }
   return ids
 }
@@ -69,12 +69,12 @@ export async function importDeckFile(file: File): Promise<Deck> {
 
   const manifestBytes = entries[MANIFEST_NAME]
   if (!manifestBytes) {
-    throw new Error('This file is not a valid Pecha Kyxa II deck export.')
+    throw new Error('This file is not a valid Pecha Kyxa ll deck export.')
   }
 
   const manifest = JSON.parse(new TextDecoder().decode(manifestBytes)) as Manifest
   if (manifest.format !== 'pecha-kyxa-ii' || !manifest.deck) {
-    throw new Error('This file is not a valid Pecha Kyxa II deck export.')
+    throw new Error('This file is not a valid Pecha Kyxa ll deck export.')
   }
 
   for (const [path, bytes] of Object.entries(entries)) {
@@ -90,7 +90,7 @@ export async function importDeckFile(file: File): Promise<Deck> {
 
 function findMimeType(deck: Deck, blobId: string): string {
   for (const slide of deck.slides) {
-    if (slide.media?.blobId === blobId) return slide.media.mimeType
+    if (slide.media?.blobId && slide.media.blobId === blobId) return slide.media.mimeType
   }
   return 'application/octet-stream'
 }

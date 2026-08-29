@@ -10,7 +10,7 @@ function App() {
   const [mode, setMode] = useState<'edit' | 'play'>('edit')
 
   if (!loaded || !deck) {
-    return <div className="app-loading">Loading Pecha Kyxa II…</div>
+    return <div className="app-loading">Loading Pecha Kyxa ll…</div>
   }
 
   function handleImportDeck(imported: Deck) {

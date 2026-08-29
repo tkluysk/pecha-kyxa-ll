@@ -98,13 +98,37 @@ button {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 
-.slide-list__header h2 {
+.slide-list__title-wrap {
+  min-width: 0;
+}
+
+.slide-list__title-input {
+  display: block;
+  width: 100%;
+  font-family: inherit;
   font-size: 1rem;
-  margin: 0;
   font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 4px;
+  margin: -2px -4px 0;
+}
+
+.slide-list__title-input:hover {
+  border-color: var(--border);
+}
+
+.slide-list__title-input:focus {
+  outline: none;
+  border-color: var(--accent-solid);
+  background: var(--bg-panel);
+}
+
+.slide-list__title-input::placeholder {
+  color: var(--text-dim);
+  font-weight: 600;
 }
 
 .slide-list__subhead {
@@ -136,6 +160,131 @@ button {
 .slide-list__footer .btn {
   font-size: 0.75rem;
   padding: 6px 8px;
+}
+
+.slide-list__help-link {
+  background: transparent;
+  border: none;
+  padding: 2px 0;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.slide-list__help-link:hover {
+  color: var(--accent-solid);
+}
+
+/* ---------- Modal ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+
+.modal {
+  position: relative;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  max-width: 640px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.modal__close:hover {
+  background: var(--bg-panel);
+  color: var(--text);
+}
+
+.modal h2 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+
+.modal__lead {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.modal__steps {
+  margin: 0 0 20px;
+  padding-left: 20px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.modal__prompt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.modal__prompt {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.modal__footnote {
+  margin: 16px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.modal__footnote a,
+.modal__lead a {
+  color: var(--accent-solid);
+}
+
+.modal code {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 0.85em;
 }
 
 .slide-list__items {
@@ -527,6 +676,33 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.media-url-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.media-url-row__or {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.media-url-row input {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.media-url-row input:focus {
+  outline: none;
+  border-color: var(--accent-solid);
 }
 
 /* ---------- Play mode ---------- */

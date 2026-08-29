@@ -6,7 +6,8 @@ interface SlideThumbProps {
 }
 
 export function SlideThumb({ slide }: SlideThumbProps) {
-  const blobUrl = useBlobUrl(slide.media?.blobId)
+  const blobUrl = useBlobUrl(slide.media?.url ? null : slide.media?.blobId)
+  const mediaUrl = slide.media?.url ?? blobUrl
 
   if (slide.embedUrl) {
     return (
@@ -16,17 +17,17 @@ export function SlideThumb({ slide }: SlideThumbProps) {
     )
   }
 
-  if (slide.media && blobUrl) {
+  if (slide.media && mediaUrl) {
     if (slide.media.kind === 'video') {
       return (
         <div className="slide-thumb">
-          <video src={blobUrl} muted playsInline />
+          <video src={mediaUrl} muted playsInline />
         </div>
       )
     }
     return (
       <div className="slide-thumb">
-        <img src={blobUrl} alt="" />
+        <img src={mediaUrl} alt="" referrerPolicy="no-referrer" />
       </div>
     )
   }

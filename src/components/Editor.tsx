@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
-import type { Deck, MediaKind, Slide } from '../types'
+import type { Deck, MediaKind, Slide, SlideMedia } from '../types'
 import { createEmptySlide } from '../types'
 import { putBlob, deleteBlob } from '../storage/db'
 import { exportDeck, importDeckFile } from '../storage/portable'
 import { useFitBox } from '../useFitBox'
 import { SlideContent } from './SlideContent'
 import { SlideThumb } from './SlideThumb'
+import { DeckFormatHelp } from './DeckFormatHelp'
 
 interface EditorProps {
   deck: Deck
@@ -21,6 +22,18 @@ function mediaKindFromMime(mime: string): MediaKind | null {
   return null
 }
 
+/** Free any IndexedDB blob backing this media. No-op for URL-referenced media. */
+function releaseMedia(media: SlideMedia | null | undefined) {
+  if (media?.blobId) deleteBlob(media.blobId)
+}
+
+function mediaKindFromUrl(url: string): MediaKind {
+  const path = url.split(/[?#]/, 1)[0].toLowerCase()
+  if (path.endsWith('.gif')) return 'gif'
+  if (/\.(mp4|webm|ogg|ogv|mov|m4v)$/.test(path)) return 'video'
+  return 'image'
+}
+
 export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) {
   const { containerRef: stageRef, size: previewSize } = useFitBox(16 / 10)
   const [selectedId, setSelectedId] = useState<string>(deck.slides[0]?.id ?? '')
@@ -28,6 +41,7 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
   const importInputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState<'export' | 'import' | null>(null)
   const [dragActive, setDragActive] = useState(false)
+  const [showFormatHelp, setShowFormatHelp] = useState(false)
   const dragCounter = useRef(0)
 
   const selectedIndex = Math.max(
@@ -53,7 +67,7 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
     const target = deck.slides.find((s) => s.id === id)
     if (!target) return
     if (!confirm('Clear this slide’s media, embed, and notes?')) return
-    if (target.media) deleteBlob(target.media.blobId)
+    releaseMedia(target.media)
     updateSlide(id, { notes: '', media: null, embedUrl: null })
   }
 
@@ -65,7 +79,10 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
     )
       return
     await Promise.all(
-      deck.slides.filter((s) => s.media).map((s) => deleteBlob(s.media!.blobId)),
+      deck.slides
+        .map((s) => s.media?.blobId)
+        .filter((id): id is string => !!id)
+        .map((id) => deleteBlob(id)),
     )
     updateDeck((prev) => ({
       ...prev,
@@ -93,13 +110,35 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
       alert('Unsupported file type. Please upload an image, GIF, or video.')
       return
     }
-    if (slide.media) {
-      await deleteBlob(slide.media.blobId)
-    }
+    releaseMedia(slide.media)
     const blobId = crypto.randomUUID()
     await putBlob(blobId, file)
     updateSlide(slide.id, {
       media: { kind, blobId, mimeType: file.type, fileName: file.name },
+      embedUrl: null,
+    })
+  }
+
+  function handleMediaUrl(rawUrl: string) {
+    if (!slide) return
+    const url = rawUrl.trim()
+    if (!url) return
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    } catch {
+      alert('Please enter a full URL, e.g. https://example.com/photo.jpg')
+      return
+    }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      alert('Media URL must be http(s).')
+      return
+    }
+    const kind = mediaKindFromUrl(url)
+    const fileName = decodeURIComponent(parsed.pathname.split('/').pop() || parsed.hostname)
+    releaseMedia(slide.media)
+    updateSlide(slide.id, {
+      media: { kind, url, mimeType: '', fileName },
       embedUrl: null,
     })
   }
@@ -137,9 +176,9 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
     updateSlide(slide.id, { embedUrl: url || null, media: url ? null : slide.media })
   }
 
-  async function clearMedia() {
+  function clearMedia() {
     if (!slide?.media) return
-    await deleteBlob(slide.media.blobId)
+    releaseMedia(slide.media)
     updateSlide(slide.id, { media: null })
   }
 
@@ -171,8 +210,15 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
         <div className="slide-list__header">
           <div className="slide-list__brand">
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" className="slide-list__logo" />
-            <div>
-              <h2>{deck.name}</h2>
+            <div className="slide-list__title-wrap">
+              <input
+                className="slide-list__title-input"
+                value={deck.name}
+                onChange={(e) => updateDeck((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Untitled deck"
+                aria-label="Deck title"
+                spellCheck={false}
+              />
               <p className="slide-list__subhead">20 slides · 20s each</p>
             </div>
           </div>
@@ -233,6 +279,9 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
           </button>
           <button className="btn" onClick={() => importInputRef.current?.click()} disabled={busy !== null}>
             {busy === 'import' ? 'Importing…' : '⬆ Upload deck'}
+          </button>
+          <button className="slide-list__help-link" onClick={() => setShowFormatHelp(true)}>
+            ✨ Make a deck with an LLM
           </button>
           <input
             ref={importInputRef}
@@ -313,8 +362,28 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
                 />
                 <span className="media-dropzone__icon">⤓</span>
                 <span className="media-dropzone__label">
-                  {slide.media ? slide.media.fileName : 'Drag & drop, or click to choose a file'}
+                  {slide.media
+                    ? slide.media.url
+                      ? `🌐 ${slide.media.fileName}`
+                      : slide.media.fileName
+                    : 'Drag & drop, or click to choose a file'}
                 </span>
+              </div>
+              <div className="media-url-row">
+                <span className="media-url-row__or">or paste an image / video URL</span>
+                <input
+                  key={slide.id + (slide.media?.url ?? '')}
+                  type="url"
+                  defaultValue={slide.media?.url ?? ''}
+                  placeholder="https://…/photo.jpg"
+                  onBlur={(e) => handleMediaUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleMediaUrl((e.target as HTMLInputElement).value)
+                    }
+                  }}
+                />
               </div>
               {slide.media && (
                 <button className="btn" onClick={(e) => { e.stopPropagation(); clearMedia() }}>
@@ -345,6 +414,8 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
           </div>
         </main>
       )}
+
+      {showFormatHelp && <DeckFormatHelp onClose={() => setShowFormatHelp(false)} />}
     </div>
   )
 }
