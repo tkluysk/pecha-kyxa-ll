@@ -1,5 +1,6 @@
 import { zip, unzip, type AsyncZippable, type Unzipped } from 'fflate'
 import type { Deck } from '../types'
+import { normalizeZone } from '../types'
 import { getBlob, putBlob } from './db'
 
 const FILE_EXTENSION = '.pechakyxa.zip'
@@ -8,7 +9,7 @@ const MEDIA_DIR = 'media/'
 
 interface Manifest {
   format: 'pecha-kyxa-ii'
-  version: 2
+  version: 2 | 3
   deck: Deck
 }
 
@@ -16,6 +17,10 @@ function collectBlobIds(deck: Deck): string[] {
   const ids: string[] = []
   for (const slide of deck.slides) {
     if (slide.media?.blobId) ids.push(slide.media.blobId)
+    for (const raw of slide.zones ?? []) {
+      const blobId = normalizeZone(raw).media?.blobId
+      if (blobId) ids.push(blobId)
+    }
   }
   return ids
 }
@@ -29,7 +34,7 @@ export async function exportDeck(deck: Deck): Promise<void> {
   const blobIds = collectBlobIds(deck)
   const files: AsyncZippable = {}
 
-  const manifest: Manifest = { format: 'pecha-kyxa-ii', version: 2, deck }
+  const manifest: Manifest = { format: 'pecha-kyxa-ii', version: 3, deck }
   files[MANIFEST_NAME] = new TextEncoder().encode(JSON.stringify(manifest))
 
   for (const blobId of blobIds) {
@@ -91,6 +96,10 @@ export async function importDeckFile(file: File): Promise<Deck> {
 function findMimeType(deck: Deck, blobId: string): string {
   for (const slide of deck.slides) {
     if (slide.media?.blobId && slide.media.blobId === blobId) return slide.media.mimeType
+    for (const raw of slide.zones ?? []) {
+      const media = normalizeZone(raw).media
+      if (media?.blobId === blobId) return media.mimeType
+    }
   }
   return 'application/octet-stream'
 }
