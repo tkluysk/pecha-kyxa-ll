@@ -41,21 +41,24 @@ export function PlayMode({ deck, onExit }: PlayModeProps) {
 
   const prev = useCallback(() => goTo(index - 1), [goTo, index])
 
+  // One countdown per slide: the interval is re-created whenever `index`
+  // changes, so a stale closure can never fire twice and skip a slide.
   useEffect(() => {
     if (!playing) return
-    tickRef.current = window.setInterval(() => {
+    setRemaining(SECONDS_PER_SLIDE)
+    const id = window.setInterval(() => {
       setRemaining((r) => {
         if (r <= 1) {
+          window.clearInterval(id)
           next()
           return SECONDS_PER_SLIDE
         }
         return r - 1
       })
     }, 1000)
-    return () => {
-      if (tickRef.current) window.clearInterval(tickRef.current)
-    }
-  }, [playing, next])
+    tickRef.current = id
+    return () => window.clearInterval(id)
+  }, [playing, index, next])
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {

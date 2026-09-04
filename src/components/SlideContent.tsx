@@ -44,9 +44,9 @@ export function SlideContent({
                 />
               ) : zone?.media ? (
                 <MediaFit media={zone.media} autoPlay={autoPlayVideo} muted={videoMuted} loop />
-              ) : (
-                <EmptyZone emptyMessage="Drag & drop media here" showDropIcon={showDropIcon} />
-              )}
+              ) : showDropIcon ? (
+                <EmptyZone emptyMessage="Drag & drop media here" showDropIcon />
+              ) : null}
             </div>
           )
         })}

@@ -109,7 +109,9 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
     if (!target) return
     if (!confirm('Clear this slide’s media, embed, and notes?')) return
     releaseMedia(target.media)
-    target.zones?.forEach((z) => releaseMedia(z.media))
+    // Zone slots are sparse — the padded array holds nulls for unused slots,
+    // so the entry itself has to be optional-chained, not just its media.
+    target.zones?.forEach((z) => releaseMedia(z?.media))
     updateSlide(id, { notes: '', media: null, embedUrl: null, layout: undefined, zones: undefined })
   }
 
@@ -122,7 +124,7 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
       return
     await Promise.all(
       deck.slides
-        .flatMap((s) => [s.media?.blobId, ...(s.zones ?? []).map((z) => z.media?.blobId)])
+        .flatMap((s) => [s.media?.blobId, ...(s.zones ?? []).map((z) => z?.media?.blobId)])
         .filter((id): id is string => !!id)
         .map((id) => deleteBlob(id)),
     )
@@ -227,14 +229,30 @@ export function Editor({ deck, updateDeck, onPlay, onImportDeck }: EditorProps) 
   function handleLayoutChange(layout: LayoutId) {
     if (!slide) return
     if (layout === '1') {
-      updateSlide(slide.id, { layout: '1' })
+      // Going back to a single zone: promote zone 0's content to the slide-level
+      // fields the single-zone renderer reads, unless the slide already has some.
+      const zones = zonesOf(slide)
+      const promote = !slide.media && !slide.embedUrl && (zones[0].media || zones[0].embedUrl)
+      updateSlide(
+        slide.id,
+        promote
+          ? { layout: '1', media: zones[0].media, embedUrl: zones[0].embedUrl }
+          : { layout: '1' },
+      )
       return
     }
     const zones = zonesOf(slide)
-    if (!slide.zones && (slide.media || slide.embedUrl)) {
+    // Move single-zone content into zone 0 whenever that zone is still empty.
+    // Checking the zone (not `!slide.zones`) matters because `zonesOf` always
+    // returns a padded array, so `slide.zones` is truthy after the first layout
+    // change — guarding on it would strand the media on every change after that.
+    const zoneZeroEmpty = !zones[0].media && !zones[0].embedUrl
+    if (zoneZeroEmpty && (slide.media || slide.embedUrl)) {
       zones[0] = { media: slide.media, embedUrl: slide.embedUrl }
     }
-    updateSlide(slide.id, { layout, zones, embedUrl: null })
+    // Content now lives in the zones; clear the slide-level fields so it is
+    // never held in two places at once.
+    updateSlide(slide.id, { layout, zones, media: null, embedUrl: null })
   }
 
   async function handleZoneFileUpload(zoneIndex: number, file: File) {
